@@ -136,6 +136,37 @@ app.post('/update-student-phase', (req, res) => {
         res.status(200).send("Phase updated");
     });
 });
+app.get('/fetch-all-data', async (req, res) => {
+    try {
+        // 1. Get Instructors
+        const [instructors] = await db.promise().query("SELECT Name FROM Instructor");
+
+        // 2. Get Students
+        const [students] = await db.promise().query("SELECT Name, Phase, StudentID FROM Student");
+
+        // 3. Get Sessions for each student
+        for (let student of students) {
+            const [sessions] = await db.promise().query(
+                "SELECT Instructor, SessionID, Date, Phase FROM Session WHERE StudentID = ?", 
+                [student.StudentID]
+            );
+
+            // 4. Get Phase Actions for each session
+            for (let session of sessions) {
+                const [actions] = await db.promise().query(`SELECT * FROM \`${session.Phase}\` WHERE SessionID = ?`, [session.SessionID]);
+                session.actions = actions;
+            }
+            student.sessions = sessions;
+        }
+
+        res.json({
+            instructors: instructors.map(i => i.Name),
+            students: students
+        });
+    } catch (err) {
+        res.status(500).json(err);
+    }
+});
 
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => {
