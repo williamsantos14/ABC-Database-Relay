@@ -7,24 +7,25 @@ app.use(cors());
 app.use(express.json());
 
 // --- DATABASE CONNECTION ---
-// Ensure you keep your actual password/host here!
 const db = mysql.createConnection({
     host: "mysql-831b527-williamgunner10-32e4.f.aivencloud.com",
     port: 22409,
     user: "avnadmin",
-    password: "YOUR_ACTUAL_PASSWORD_HERE",
+    password: "AVNS_BDoxs3dTr7ysaWg9ZCy", // Ensure no extra spaces!
     database: "defaultdb",
     ssl: {
         rejectUnauthorized: false
     }
 });
 
+// Using a slightly more robust connection handler
 db.connect(err => {
     if (err) {
-        console.error('Database connection failed: ' + err.stack);
+        console.error('CRITICAL: Database connection failed:');
+        console.error(err.message);
         return;
     }
-    console.log('Connected to Aiven MySQL.');
+    console.log('Successfully connected to Aiven MySQL.');
 });
 
 // --- GETTERS (Loading data into App) ---
