@@ -1,169 +1,188 @@
 const express = require('express');
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2/promise'); // Critical: use the promise version
 const cors = require('cors');
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-// --- DATABASE CONNECTION ---
-const db = mysql.createConnection({
+// --- DATABASE CONNECTION CONFIG ---
+const dbConfig = {
     host: "mysql-831b527-williamgunner10-32e4.f.aivencloud.com",
     port: 22409,
     user: "avnadmin",
-    password: "AVNS_BDoxs3dTr7ysaWg9ZCy", // Ensure no extra spaces!
+    password: "AVNS_BDoxs3dTr7ysaWg9ZCy", // Replace with your real password
     database: "defaultdb",
     ssl: {
         rejectUnauthorized: false
-    }
-});
+    },
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
+};
 
-// Using a slightly more robust connection handler
-db.connect(err => {
-    if (err) {
-        console.error('CRITICAL: Database connection failed:');
-        console.error(err.message);
-        return;
-    }
-    console.log('Successfully connected to Aiven MySQL.');
-});
+// Create a connection pool (highly recommended for web servers)
+const pool = mysql.createPool(dbConfig);
 
 // --- GETTERS (Loading data into App) ---
-app.get('/instructors', (req, res) => {
-    db.query("SELECT Name FROM Instructor", (err, results) => {
-        if (err) return res.status(500).json(err);
+
+app.get('/instructors', async (req, res) => {
+    try {
+        const [results] = await pool.query("SELECT Name FROM Instructor");
         res.json(results.map(r => r.Name));
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
 // --- POSTERS (Saving data from App) ---
 
-app.post('/add-student', (req, res) => {
+app.post('/add-student', async (req, res) => {
     const { name, phase } = req.body;
-    db.query("INSERT INTO Student (Name, Phase) VALUES(?, ?)", [name, phase], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query("INSERT INTO Student (Name, Phase) VALUES(?, ?)", [name, phase]);
         res.status(200).send("Student added");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-app.post('/add-instructor', (req, res) => {
+app.post('/add-instructor', async (req, res) => {
     const { name } = req.body;
-    db.query("INSERT INTO Instructor (Name) VALUES (?)", [name], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query("INSERT INTO Instructor (Name) VALUES (?)", [name]);
         res.status(200).send("Instructor added");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-app.post('/add-session', (req, res) => {
+app.post('/add-session', async (req, res) => {
     const { studentID, instructor, date, phase } = req.body;
-    db.query("INSERT INTO Session (StudentID, Instructor, Date, Phase) VALUES(?, ?, ?, ?)", 
-    [studentID, instructor, date, phase], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query("INSERT INTO Session (StudentID, Instructor, Date, Phase) VALUES(?, ?, ?, ?)", 
+        [studentID, instructor, date, phase]);
         res.status(200).send("Session added");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
 // --- PHASE UPDATES ---
 
-app.post('/add-phase1', (req, res) => {
+app.post('/add-phase1', async (req, res) => {
     const { sessionID, pickUp, reached, hand, picture, activity, released } = req.body;
     const sql = "INSERT INTO `1` (SessionID, PickedUp, Reached, Hand, Picture, Activity, Released) VALUES(?, ?, ?, ?, ?, ?, ?)";
-    db.query(sql, [sessionID, pickUp, reached, hand, picture, activity, released], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query(sql, [sessionID, pickUp, reached, hand, picture, activity, released]);
         res.status(200).send("Phase 1 added");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-app.post('/add-phase2', (req, res) => {
+app.post('/add-phase2', async (req, res) => {
     const { sessionID, travelBook, travelCP, distBook, distCP, picture, activity } = req.body;
     const sql = "INSERT INTO `2` (SessionID, `Travelled to Book`, `Travelled to CP`, `Distance to Book`, `Distance to CP`, Picture, Activity) VALUES(?, ?, ?, ?, ?, ?, ?)";
-    db.query(sql, [sessionID, travelBook, travelCP, distBook, distCP, picture, activity], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query(sql, [sessionID, travelBook, travelCP, distBook, distCP, picture, activity]);
         res.status(200).send("Phase 2 added");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-app.post('/add-phase3A', (req, res) => {
+app.post('/add-phase3A', async (req, res) => {
     const { sessionID, discrimination, negReaction, picture } = req.body;
     const sql = "INSERT INTO `3A` (SessionID, `Discrimination Level`, `Negative Reaction`, Picture) VALUES(?, ?, ?, ?)";
-    db.query(sql, [sessionID, discrimination, negReaction, picture], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query(sql, [sessionID, discrimination, negReaction, picture]);
         res.status(200).send("Phase 3A added");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-app.post('/add-phase3B', (req, res) => {
+app.post('/add-phase3B', async (req, res) => {
     const { sessionID, arraySize, correspondence, distBook, distCP, picture, activity } = req.body;
     const sql = "INSERT INTO `3B` (SessionID, `Array Size`, Correspondence, `Book Distance`, `CP Distance`, Picture, Activity) VALUES(?, ?, ?, ?, ?, ?, ?)";
-    db.query(sql, [sessionID, arraySize, correspondence, distBook, distCP, picture, activity], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query(sql, [sessionID, arraySize, correspondence, distBook, distCP, picture, activity]);
         res.status(200).send("Phase 3B added");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-app.post('/add-phase4', (req, res) => {
+app.post('/add-phase4', async (req, res) => {
     const { sessionID, sentenceStrip, recPicture, exchange, tapRead, correspondence, vocalizes, distCP, distBook } = req.body;
     const sql = "INSERT INTO `4` (SessionID, `Want Sentence Strip`, `Recommended Picture`, ExchangeStrip, `Tap Read`, Correspondence, Vocalizes, `Distance to CP`, `Distance to Book`) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    db.query(sql, [sessionID, sentenceStrip, recPicture, exchange, tapRead, correspondence, vocalizes, distCP, distBook], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query(sql, [sessionID, sentenceStrip, recPicture, exchange, tapRead, correspondence, vocalizes, distCP, distBook]);
         res.status(200).send("Phase 4 added");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-app.post('/add-phase5', (req, res) => {
+app.post('/add-phase5', async (req, res) => {
     const { sessionID, delay, correctAns, beatPrompt, spontaneous, correspondence } = req.body;
     const sql = "INSERT INTO `5` (SessionID, `Delay Interval`, `Correct Answer`, `Beat Prompt`, Spontaneous, Correspondence) VALUES(?, ?, ?, ?, ?, ?)";
-    db.query(sql, [sessionID, delay, correctAns, beatPrompt, spontaneous, correspondence], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query(sql, [sessionID, delay, correctAns, beatPrompt, spontaneous, correspondence]);
         res.status(200).send("Phase 5 added");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-app.post('/add-phase6', (req, res) => {
+app.post('/add-phase6', async (req, res) => {
     const { sessionID, sentenceStarter, spontaneous, independence, picture } = req.body;
     const sql = "INSERT INTO `6` (SessionID, `Sentence Starter`, Spontaneous, Independence, Picture) VALUES(?,?,?,?)";
-    db.query(sql, [sessionID, sentenceStarter, spontaneous, independence, picture], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query(sql, [sessionID, sentenceStarter, spontaneous, independence, picture]);
         res.status(200).send("Phase 6 added");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
 // --- UTILITY METHODS ---
 
-app.post('/remove-last-action', (req, res) => {
+app.post('/remove-last-action', async (req, res) => {
     const { table, sessionID } = req.body;
     const sql = `DELETE FROM \`${table}\` WHERE ActionID = (SELECT max_id FROM (SELECT MAX(ActionID) as max_id FROM \`${table}\` WHERE SessionID = ?) as temp)`;
-    db.query(sql, [sessionID], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query(sql, [sessionID]);
         res.status(200).send("Last action removed");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
 
-app.post('/update-student-phase', (req, res) => {
+app.post('/update-student-phase', async (req, res) => {
     const { studentID, newPhase } = req.body;
-    db.query("UPDATE Student SET Phase = ? WHERE StudentID = ?", [newPhase, studentID], (err) => {
-        if (err) return res.status(500).json(err);
+    try {
+        await pool.query("UPDATE Student SET Phase = ? WHERE StudentID = ?", [newPhase, studentID]);
         res.status(200).send("Phase updated");
-    });
+    } catch (err) {
+        res.status(500).json(err);
+    }
 });
+
 app.get('/fetch-all-data', async (req, res) => {
     try {
-        // 1. Get Instructors
-        const [instructors] = await db.promise().query("SELECT Name FROM Instructor");
+        const [instructors] = await pool.query("SELECT Name FROM Instructor");
+        const [students] = await pool.query("SELECT Name, Phase, StudentID FROM Student");
 
-        // 2. Get Students
-        const [students] = await db.promise().query("SELECT Name, Phase, StudentID FROM Student");
-
-        // 3. Get Sessions for each student
         for (let student of students) {
-            const [sessions] = await db.promise().query(
+            const [sessions] = await pool.query(
                 "SELECT Instructor, SessionID, Date, Phase FROM Session WHERE StudentID = ?", 
                 [student.StudentID]
             );
 
-            // 4. Get Phase Actions for each session
             for (let session of sessions) {
-                const [actions] = await db.promise().query(`SELECT * FROM \`${session.Phase}\` WHERE SessionID = ?`, [session.SessionID]);
+                const [actions] = await pool.query(`SELECT * FROM \`${session.Phase}\` WHERE SessionID = ?`, [session.SessionID]);
                 session.actions = actions;
             }
             student.sessions = sessions;
@@ -174,6 +193,7 @@ app.get('/fetch-all-data', async (req, res) => {
             students: students
         });
     } catch (err) {
+        console.error(err);
         res.status(500).json(err);
     }
 });
