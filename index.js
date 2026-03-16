@@ -8,7 +8,16 @@ app.use(express.json());
 
 // --- DATABASE CONNECTION ---
 // Ensure you keep your actual password/host here!
-const db = mysql.createConnection("mysql://avnadmin:AVNS_BDoxs3dTr7ysaWg9ZCy@mysql-831b527-williamgunner10-32e4.f.aivencloud.com:22409/defaultdb?sslmode=required");
+const db = mysql.createConnection({
+    host: "mysql-831b527-williamgunner10-32e4.f.aivencloud.com",
+    port: 22409,
+    user: "avnadmin",
+    password: "YOUR_ACTUAL_PASSWORD_HERE",
+    database: "defaultdb",
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
 
 db.connect(err => {
     if (err) {
