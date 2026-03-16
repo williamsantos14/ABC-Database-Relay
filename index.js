@@ -7,7 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 // This connects to your Aiven Database
-const db = mysql.createConnection("mysql://USER:PASSWORD@HOST:PORT/DB_NAME?sslmode=required");
+const db = mysql.createConnection("mysql://avnadmin:AVNS_BDoxs3dTr7ysaWg9ZCy@mysql-831b527-williamgunner10-32e4.f.aivencloud.com:22409/defaultdb?sslmode=required");
 
 app.get('/instructors', (req, res) => {
     db.query("SELECT Name FROM Instructor", (err, results) => {
